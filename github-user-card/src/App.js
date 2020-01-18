@@ -17,11 +17,14 @@ class App extends Component {
         super();
         this.state = {
             user: {},
-            followers: []
+            followers: [],
+            followersInfo: []
         };
     }
 
+    // did it all in componentDidMount because I want all the info rendered to screen at the same time without waiting for any updates and then rerendering
     componentDidMount() {
+        // get my github info
         fetch("https://api.github.com/users/jgarrow")
             .then(res => res.json())
             .then(res => {
@@ -31,11 +34,36 @@ class App extends Component {
                 const user = { ...this.state.user };
                 const followersUrl = user["followers_url"];
 
+                // then get my followers urls
                 fetch(followersUrl)
                     .then(res => res.json())
                     .then(res => {
                         console.log("followers: ", res);
                         this.setState({ ...this.state, followers: res });
+
+                        // then get my followers' github info
+                        this.state.followers.forEach((user, index) => {
+                            fetch(`https://api.github.com/users/${user.login}`)
+                                .then(res => res.json())
+                                .then(res => {
+                                    let myFollowers = [
+                                        ...this.state.followersInfo
+                                    ];
+
+                                    myFollowers[index] = res;
+
+                                    this.setState({
+                                        ...this.setState,
+                                        followersInfo: myFollowers
+                                    });
+                                })
+                                .catch(err =>
+                                    console.log(
+                                        "Error fetching follower data",
+                                        err
+                                    )
+                                );
+                        });
                     })
                     .catch(err =>
                         console.log(
@@ -53,8 +81,8 @@ class App extends Component {
         return (
             <CardsContainer>
                 {this.state.user !== {} && <UserCard user={this.state.user} />}
-                {this.state.followers !== [] &&
-                    this.state.followers.map((user, index) => (
+                {this.state.followersInfo !== [] &&
+                    this.state.followersInfo.map((user, index) => (
                         <UserCard key={index} user={user} />
                     ))}
             </CardsContainer>
